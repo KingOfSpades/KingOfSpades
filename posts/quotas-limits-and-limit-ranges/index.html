@@ -1,0 +1,427 @@
+<!DOCTYPE html><html lang="en" ><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no"><meta name="day-prompt" content="days ago"><meta name="hour-prompt" content="hours ago"><meta name="minute-prompt" content="minutes ago"><meta name="justnow-prompt" content="just now"><meta name="generator" content="Jekyll v4.2.2" /><meta property="og:title" content="Quotas, limits and limit-ranges" /><meta property="og:locale" content="en" /><meta name="description" content="In this post we will be diving in to quotas and limits. Quotas and limits can be used to allocate, limit en reserve resources within your cluster for one or multiple namepaces and can limit the usage of CPU and Memory for workloads. Limits can also be used to gurante (by reserving) resources for your workloads. Understanding and using quotas and limits from day one can help plan the resource growth of your cluster and prevents unwanted resource depletion. Using these API objects helps your cluster to more effectively schedule workloads across your cluster while also making sure they get their piece of resources when they need it." /><meta property="og:description" content="In this post we will be diving in to quotas and limits. Quotas and limits can be used to allocate, limit en reserve resources within your cluster for one or multiple namepaces and can limit the usage of CPU and Memory for workloads. Limits can also be used to gurante (by reserving) resources for your workloads. Understanding and using quotas and limits from day one can help plan the resource growth of your cluster and prevents unwanted resource depletion. Using these API objects helps your cluster to more effectively schedule workloads across your cluster while also making sure they get their piece of resources when they need it." /><link rel="canonical" href="https://kingofspades.github.io/posts/quotas-limits-and-limit-ranges/" /><meta property="og:url" content="https://kingofspades.github.io/posts/quotas-limits-and-limit-ranges/" /><meta property="og:site_name" content="Christian’s Blog" /><meta property="og:type" content="article" /><meta property="article:published_time" content="2022-01-29T00:00:00+01:00" /><meta name="twitter:card" content="summary" /><meta property="twitter:title" content="Quotas, limits and limit-ranges" /><meta name="twitter:site" content="@CABenstein" /><meta name="google-site-verification" content="google_meta_tag_verification" /> <script type="application/ld+json"> {"@context":"https://schema.org","@type":"BlogPosting","dateModified":"2022-01-29T00:00:00+01:00","datePublished":"2022-01-29T00:00:00+01:00","description":"In this post we will be diving in to quotas and limits. Quotas and limits can be used to allocate, limit en reserve resources within your cluster for one or multiple namepaces and can limit the usage of CPU and Memory for workloads. Limits can also be used to gurante (by reserving) resources for your workloads. Understanding and using quotas and limits from day one can help plan the resource growth of your cluster and prevents unwanted resource depletion. Using these API objects helps your cluster to more effectively schedule workloads across your cluster while also making sure they get their piece of resources when they need it.","headline":"Quotas, limits and limit-ranges","mainEntityOfPage":{"@type":"WebPage","@id":"https://kingofspades.github.io/posts/quotas-limits-and-limit-ranges/"},"url":"https://kingofspades.github.io/posts/quotas-limits-and-limit-ranges/"}</script><title>Quotas, limits and limit-ranges | Christian's Blog</title><link rel="apple-touch-icon" sizes="180x180" href="/assets/img/favicons/apple-touch-icon.png"><link rel="icon" type="image/png" sizes="32x32" href="/assets/img/favicons/favicon-32x32.png"><link rel="icon" type="image/png" sizes="16x16" href="/assets/img/favicons/favicon-16x16.png"><link rel="manifest" href="/assets/img/favicons/site.webmanifest"><link rel="shortcut icon" href="/assets/img/favicons/favicon.ico"><meta name="apple-mobile-web-app-title" content="Christian's Blog"><meta name="application-name" content="Christian's Blog"><meta name="msapplication-TileColor" content="#da532c"><meta name="msapplication-config" content="/assets/img/favicons/browserconfig.xml"><meta name="theme-color" content="#ffffff"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous"><link rel="dns-prefetch" href="https://fonts.gstatic.com"><link rel="preconnect" href="https://www.google-analytics.com" crossorigin="use-credentials"><link rel="dns-prefetch" href="https://www.google-analytics.com"><link rel="preconnect" href="https://www.googletagmanager.com" crossorigin="anonymous"><link rel="dns-prefetch" href="https://www.googletagmanager.com"><link rel="preconnect" href="https://cdn.jsdelivr.net"><link rel="dns-prefetch" href="https://cdn.jsdelivr.net"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/css/bootstrap.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.11.2/css/all.min.css"><link rel="stylesheet" href="/assets/css/style.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/afeld/bootstrap-toc@1.0.1/dist/bootstrap-toc.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/magnific-popup@1.1.0/dist/magnific-popup.min.css"> <script src="https://cdn.jsdelivr.net/npm/jquery@3/dist/jquery.min.js"></script> <script type="text/javascript"> class ModeToggle { static get MODE_KEY() { return "mode"; } static get DARK_MODE() { return "dark"; } static get LIGHT_MODE() { return "light"; } constructor() { if (this.hasMode) { if (this.isDarkMode) { if (!this.isSysDarkPrefer) { this.setDark(); } } else { if (this.isSysDarkPrefer) { this.setLight(); } } } let self = this; /* always follow the system prefers */ this.sysDarkPrefers.addEventListener("change", () => { if (self.hasMode) { if (self.isDarkMode) { if (!self.isSysDarkPrefer) { self.setDark(); } } else { if (self.isSysDarkPrefer) { self.setLight(); } } self.clearMode(); } self.updateMermaid(); }); } /* constructor() */ get sysDarkPrefers() { return window.matchMedia("(prefers-color-scheme: dark)"); } get isSysDarkPrefer() { return this.sysDarkPrefers.matches; } get isDarkMode() { return this.mode === ModeToggle.DARK_MODE; } get isLightMode() { return this.mode === ModeToggle.LIGHT_MODE; } get hasMode() { return this.mode != null; } get mode() { return sessionStorage.getItem(ModeToggle.MODE_KEY); } /* get the current mode on screen */ get modeStatus() { if (this.isDarkMode || (!this.hasMode && this.isSysDarkPrefer)) { return ModeToggle.DARK_MODE; } else { return ModeToggle.LIGHT_MODE; } } setDark() { $('html').attr(ModeToggle.MODE_KEY, ModeToggle.DARK_MODE); sessionStorage.setItem(ModeToggle.MODE_KEY, ModeToggle.DARK_MODE); } setLight() { $('html').attr(ModeToggle.MODE_KEY, ModeToggle.LIGHT_MODE); sessionStorage.setItem(ModeToggle.MODE_KEY, ModeToggle.LIGHT_MODE); } clearMode() { $('html').removeAttr(ModeToggle.MODE_KEY); sessionStorage.removeItem(ModeToggle.MODE_KEY); } updateMermaid() { if (typeof mermaid !== "undefined") { let expectedTheme = (this.modeStatus === ModeToggle.DARK_MODE? "dark" : "default"); let config = { theme: expectedTheme }; /* re-render the SVG › <https://github.com/mermaid-js/mermaid/issues/311#issuecomment-332557344> */ $(".mermaid").each(function() { let svgCode = $(this).prev().children().html(); $(this).removeAttr("data-processed"); $(this).html(svgCode); }); mermaid.initialize(config); mermaid.init(undefined, ".mermaid"); } } } /* ModeToggle */ const toggle = new ModeToggle(); function flipMode() { if (toggle.hasMode) { if (toggle.isSysDarkPrefer) { if (toggle.isLightMode) { toggle.clearMode(); } else { toggle.setLight(); } } else { if (toggle.isDarkMode) { toggle.clearMode(); } else { toggle.setDark(); } } } else { if (toggle.isSysDarkPrefer) { toggle.setLight(); } else { toggle.setDark(); } } toggle.updateMermaid(); } /* flipMode() */ </script><body data-spy="scroll" data-target="#toc"><div id="sidebar" class="d-flex flex-column align-items-end" lang="en"><div class="profile-wrapper text-center"><div id="avatar"> <a href="/" alt="avatar" class="mx-auto"> <img src="/assets/images/bio-photo.png" alt="avatar" onerror="this.style.display='none'"> </a></div><div class="site-title mt-3"> <a href="/">Christian's Blog</a></div><div class="site-subtitle font-italic">Stories of /dev/null</div></div><ul class="w-100"><li class="nav-item"> <a href="/" class="nav-link"> <i class="fa-fw fas fa-home ml-xl-3 mr-xl-3 unloaded"></i> <span>HOME</span> </a><li class="nav-item"> <a href="/about/" class="nav-link"> <i class="fa-fw fas fa-info-circle ml-xl-3 mr-xl-3 unloaded"></i> <span>ABOUT</span> </a><li class="nav-item"> <a href="/categories/" class="nav-link"> <i class="fa-fw fas fa-stream ml-xl-3 mr-xl-3 unloaded"></i> <span>CATEGORIES</span> </a><li class="nav-item"> <a href="/tags/" class="nav-link"> <i class="fa-fw fas fa-tag ml-xl-3 mr-xl-3 unloaded"></i> <span>TAGS</span> </a><li class="nav-item"> <a href="/ex280/" class="nav-link"> <i class="fa-fw fas fa-graduation-cap ml-xl-3 mr-xl-3 unloaded"></i> <span>EX280</span> </a><li class="nav-item"> <a href="/archives/" class="nav-link"> <i class="fa-fw fas fa-archive ml-xl-3 mr-xl-3 unloaded"></i> <span>ARCHIVES</span> </a></ul><div class="sidebar-bottom mt-auto d-flex flex-wrap justify-content-center align-items-center"> <button class="mode-toggle btn" aria-label="Switch Mode"> <i class="fas fa-adjust"></i> </button> <span class="icon-border"></span> <a href="https://github.com/KingOfSpades" aria-label="github" target="_blank" rel="noopener"> <i class="fab fa-github"></i> </a> <a href="/feed.xml" aria-label="rss" > <i class="fas fa-rss"></i> </a></div></div><div id="topbar-wrapper" class="row justify-content-center topbar-down"><div id="topbar" class="col-11 d-flex h-100 align-items-center justify-content-between"> <span id="breadcrumb"> <span> <a href="/"> Home </a> </span> <span>Quotas, limits and limit-ranges</span> </span> <i id="sidebar-trigger" class="fas fa-bars fa-fw"></i><div id="topbar-title"> Post</div><i id="search-trigger" class="fas fa-search fa-fw"></i> <span id="search-wrapper" class="align-items-center"> <i class="fas fa-search fa-fw"></i> <input class="form-control" id="search-input" type="search" aria-label="search" autocomplete="off" placeholder="Search..."> <i class="fa fa-times-circle fa-fw" id="search-cleaner"></i> </span> <span id="search-cancel" >Cancel</span></div></div><div id="main-wrapper"><div id="main"><div class="row"><div id="core-wrapper" class="col-12 col-lg-11 col-xl-8"><div class="post pl-1 pr-1 pl-sm-2 pr-sm-2 pl-md-4 pr-md-4"><h1 data-toc-skip>Quotas, limits and limit-ranges</h1><div class="post-meta text-muted"><div> By <em> <a href="https://github.com/KingOfSpades">Christian A. Benstein</a> </em></div><div class="d-flex"><div> <span> Posted <em class="timeago" date="2022-01-29 00:00:00 +0100" data-toggle="tooltip" data-placement="bottom" title="Sat, Jan 29, 2022, 12:00 AM +0100" >Jan 29</em> </span> <span class="readtime" data-toggle="tooltip" data-placement="bottom" title="3636 words"> <em>20 min</em> read</span></div></div></div><div class="post-content"><p>In this post we will be diving in to quotas and limits. Quotas and limits can be used to allocate, limit en reserve resources within your cluster for one or multiple namepaces and can limit the usage of CPU and Memory for workloads. Limits can also be used to gurante (by reserving) resources for your workloads. Understanding and using quotas and limits from day one can help plan the resource growth of your cluster and prevents unwanted resource depletion. Using these API objects helps your cluster to more effectively schedule workloads across your cluster while also making sure they get their piece of resources when they need it.</p><p>As always, these concepts apply to both Kubernetes and Openshift. We will try to do everything from the <code class="language-plaintext highlighter-rouge">oc</code> command line.</p><h1 id="controlling-resources-allocation">Controlling resources allocation</h1><p>We have options to control how many resources namespaces and pods are allowed to use or create in a cluster. This comes in handy to prevent unwanted growth of a namespace and prevent depletion of vital compute resources. Let’s start with a overview:</p><ul><li><strong>Limits</strong> (api: can set the limits and request of a workload. With a limit we can limit a workload to use a maximum amount of CPU or request a minimum amount of CPU. You can find limits under <code class="language-plaintext highlighter-rouge">pods.spec.containers.resource</code><ul><li><strong>Limit</strong> is the maximum amount of a resource that can be used. Found under <code class="language-plaintext highlighter-rouge">pods.spec.containers.resource.limits</code><li><strong>Request</strong> is the amount of a resource that is reserved. Requests are set under <code class="language-plaintext highlighter-rouge">pods.spec.containers.resource.requests</code></ul><li><strong>Limit Ranges</strong> are great because they assign default limits and requests to pods that don’t have any and can set a threshold on how much every individual pod can use. This gives you finer control on resource allocation then a Quota because a quota looks at all requests in a namespace. Limit ranges use the API object <code class="language-plaintext highlighter-rouge">limitrange</code><li><strong>Quotas</strong> are used to set how many resources a namespace can create and/or request. We can limit the amount of pods that can run in a single namespace. We can also use a quota to limit the amount of CPU all workloads can use by enforcing the usage of a CPU limit on each pod or the amount of memory the workloads can request. A quota is created of the type <code class="language-plaintext highlighter-rouge">resourcequota</code><li><strong>Cluster Quotas</strong> can be used across the Openshift cluster and are not bound to a single namespace. A Cluster Qouta of the object <code class="language-plaintext highlighter-rouge">clusterresourcequota</code></ul><h2 id="what-do-the-units-mean">What do the units mean?<a href="#what-do-the-units-mean"><i class="fas fa-hashtag"></i></a></h2></h2><p>When we request or limit compute resources we do this on <code class="language-plaintext highlighter-rouge">Memory</code> and <code class="language-plaintext highlighter-rouge">CPU</code> . The amount that we want is expressed in units in different ways in <code class="language-plaintext highlighter-rouge">yaml</code>:</p><ul><li><strong>CPU</strong> A single virtual CPU is always a <code class="language-plaintext highlighter-rouge">1</code> in <code class="language-plaintext highlighter-rouge">yaml</code> or <code class="language-plaintext highlighter-rouge">1000m</code>. We can use the smaller unit to divide and share the CPU computing power between workloads. The actual clock speed of the CPU in this case is not relevant but could have an impact when you move to another cluster or CPU type <sup id="fnref:CPUInKubernetes" role="doc-noteref"><a href="#fn:CPUInKubernetes" class="footnote" rel="footnote">1</a></sup>.<li><strong>Memory</strong> Unlike CPU memory is expressed in bytes. You can use a fixed number like <code class="language-plaintext highlighter-rouge">1500M</code> or a power-of-two equivalent like <code class="language-plaintext highlighter-rouge">512Mi</code> [^MemoryInKubernetes]. We will use the later in our examples.</ul><h1 id="understanding-limits">Understanding Limits</h1><p>A limit can consist of an upper value (limit) and lower (request) threshold that you set on a pod or container. Limits on individual pods are usually baked in to the <code class="language-plaintext highlighter-rouge">yaml</code> by most applications (you’ll see a lot of <code class="language-plaintext highlighter-rouge">cpu: 10m</code> requests in containers, see below for why). Most of the time we will set a limit for a complete deployment.</p><p>Limits on a pod can look like this on a deployment:</p><div class="language-yaml highlighter-rouge"><div class="code-header"> <span label-text="YAML"><i class="fas fa-code small"></i></span> <button aria-label="copy" title-succeed="Copied!"><i class="far fa-clipboard"></i></button></div><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+</pre><td class="rouge-code"><pre><span class="na">apiVersion</span><span class="pi">:</span> <span class="s">apps/v1</span>
+<span class="na">kind</span><span class="pi">:</span> <span class="s">Deployment</span>
+<span class="na">metadata</span><span class="pi">:</span>
+<span class="s">....</span>
+<span class="na">spec</span><span class="pi">:</span>
+<span class="s">....</span>
+  <span class="s">spec</span><span class="err">:</span>
+    <span class="na">containers</span><span class="pi">:</span>
+      <span class="s">....</span>
+      <span class="s">resources</span><span class="err">:</span>
+          <span class="na">limits</span><span class="pi">:</span>
+            <span class="na">cpu</span><span class="pi">:</span> <span class="s">500m</span>
+            <span class="na">memory</span><span class="pi">:</span> <span class="s">512Mi</span>
+          <span class="na">requests</span><span class="pi">:</span>
+            <span class="na">cpu</span><span class="pi">:</span> <span class="s">10m</span>
+            <span class="na">memory</span><span class="pi">:</span> <span class="s">128Mi</span>       
+</pre></table></code></div></div><h2 id="the-request-part">The request part<a href="#the-request-part"><i class="fas fa-hashtag"></i></a></h2></h2><p>A part of a limit is that you can also set a request. This tells the scheduler that in order to run your workload you’ll need a certain amount of CPU or Memory. The scheduler will place your pods on a node that has this amount free and the amount you request is held in reserver for you. A lot of pods have a CPU request of <code class="language-plaintext highlighter-rouge">10m</code>. So thats 1/100 of a vCPU. The reason for this is that they often don’t use a lot of CPU but in the case of a high load on a node they would still receive <em>some</em> CPU from the node. Some things to keep in mind:</p><ul><li>If you set no requests on a pod and the node on which the pod is running is getting busy your pod might not receive any CPU or Memory. Why? Because you didn’t tell the cluster you needed any<li>If you set only a limit and no request of a resource type the cluster will take your limit and turn it in to the request. So if you set a high limit, be sure to set the right request so that your pod wont eat up all resources <sup id="fnref:LimitButNoRequest" role="doc-noteref"><a href="#fn:LimitButNoRequest" class="footnote" rel="footnote">2</a></sup>.<li>If you set a request but no limit the cluster will try to default to the values set in a <code class="language-plaintext highlighter-rouge">limitrange</code> or the cluster default setting <sup id="fnref:RequestButNoLimit" role="doc-noteref"><a href="#fn:RequestButNoLimit" class="footnote" rel="footnote">3</a></sup>.</ul><h2 id="hitting-a-limit">Hitting a limit<a href="#hitting-a-limit"><i class="fas fa-hashtag"></i></a></h2></h2><p>So we set a limit. Everything is running but then al of sudden cHaOs. Pods go wild, workloads go crazy! Your whole namespace is on fire! 🔥 Resources are being eaten up by different pods. CPU and memory usage is climbing! What will happen now?</p><ul><li><strong>Hitting the CPU Limit</strong> No worries, hitting a CPU limit is not cause for panic. Your pods will be throttled by the cluster. This might have some unforseen impact on perfomance but in most cases your fine<li><strong>Hitting the Memory Limit</strong> Now this is a bit more tricky. When you hit your memory limit in a cluster the cluster will kill the workout with the classic line <code class="language-plaintext highlighter-rouge">OOM</code> (Out Of Memory). Even if the node has <code class="language-plaintext highlighter-rouge">48Gi</code> of Memory and is not using half of it. If your pod hits your defined Memory limit it is killed <sup id="fnref:3OOMAndMemoryUsage" role="doc-noteref"><a href="#fn:3OOMAndMemoryUsage" class="footnote" rel="footnote">4</a></sup>.</ul><h2 id="understanding-limit-ranges">Understanding Limit Ranges<a href="#understanding-limit-ranges"><i class="fas fa-hashtag"></i></a></h2></h2><p>A <code class="language-plaintext highlighter-rouge">limit</code> applies a limit (or request) of resources on a pod. A <code class="language-plaintext highlighter-rouge">limitrange</code> can apply a minimum, maximum or default value for limits and requests of a pod or container in your namespace. If for example you want to have all pods in a namespace request a minimum of <code class="language-plaintext highlighter-rouge">128Mi</code> of Memory you can create a <code class="language-plaintext highlighter-rouge">limitrange</code> to do this.</p><h2 id="limits-on-a-whole-namespaces">Limits on a whole Namespaces<a href="#limits-on-a-whole-namespaces"><i class="fas fa-hashtag"></i></a></h2></h2><p>As we said before. We set limits on pods (using the deployment) or on individual containers. But how do we control the total usage of CPU and Memory of a namespaces? But how do we do this? By using a quota!</p><h1 id="understanding-quotas">Understanding Quotas</h1><p>Quotas can be used to limit the amount of resources that can be created, requested or used. Usually quotas are set on a namespace basis (so they apply to the sum of the resources in the namespace) but they can also be set on a group of namespaces or even on a per user basis.</p><p>Limits can for example:</p><ul><li>Control the maximum amount of pods that can run<li>Limit the amount of routes used by a namespace<li>Control how many services can be created<li>Set the maximum amount of CPU all pods can request<li>Set a maximum amount of Memory that can be used at once</ul><p>In short “Quotas can be used to apply limits”.</p><p>A quota can look like this</p><div class="language-yaml highlighter-rouge"><div class="code-header"> <span label-text="YAML"><i class="fas fa-code small"></i></span> <button aria-label="copy" title-succeed="Copied!"><i class="far fa-clipboard"></i></button></div><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+</pre><td class="rouge-code"><pre><span class="na">apiVersion</span><span class="pi">:</span> <span class="s">v1</span>
+<span class="na">kind</span><span class="pi">:</span> <span class="s">ResourceQuota</span>
+<span class="na">metadata</span><span class="pi">:</span>
+  <span class="na">name</span><span class="pi">:</span> <span class="s">my-quota</span>
+  <span class="na">namespace</span><span class="pi">:</span> <span class="s">a-quota-for-me</span>
+<span class="na">spec</span><span class="pi">:</span>
+  <span class="na">hard</span><span class="pi">:</span>
+    <span class="na">cpu</span><span class="pi">:</span> <span class="s2">"</span><span class="s">1"</span>
+    <span class="na">memory</span><span class="pi">:</span> <span class="s">1G</span>
+    <span class="na">persistentvolumeclaims</span><span class="pi">:</span> <span class="s2">"</span><span class="s">10"</span>
+    <span class="na">pods</span><span class="pi">:</span> <span class="s2">"</span><span class="s">2"</span>
+    <span class="na">replicationcontrollers</span><span class="pi">:</span> <span class="s2">"</span><span class="s">2"</span>
+    <span class="na">resourcequotas</span><span class="pi">:</span> <span class="s2">"</span><span class="s">1"</span>
+    <span class="na">secrets</span><span class="pi">:</span> <span class="s2">"</span><span class="s">5"</span>
+    <span class="na">services</span><span class="pi">:</span> <span class="s2">"</span><span class="s">3"</span>
+</pre></table></code></div></div><p><code class="language-plaintext highlighter-rouge">cpu</code> and <code class="language-plaintext highlighter-rouge">memory</code> in this example relate to requests. To set a limit use <code class="language-plaintext highlighter-rouge">limits.cpu</code> and <code class="language-plaintext highlighter-rouge">limits.memory</code>. You can also go 100% correct and use <code class="language-plaintext highlighter-rouge">requests.cpu</code> and <code class="language-plaintext highlighter-rouge">requests.memory</code> and save yourself some troubleshooting time in the future.</p><h2 id="understanding-quota-ranges">Understanding quota ranges<a href="#understanding-quota-ranges"><i class="fas fa-hashtag"></i></a></h2></h2><p>A quota can be crated with two different scopes:</p><ul><li><code class="language-plaintext highlighter-rouge">resourcequota</code> Is created with <code class="language-plaintext highlighter-rouge">oc create quota</code><li><code class="language-plaintext highlighter-rouge">clusterresourcequota</code> Is created with <code class="language-plaintext highlighter-rouge">oc create clusterresourcequota</code></ul><p>So what are the differences?</p><h3 id="range-of-resourcequota">Range of <code class="language-plaintext highlighter-rouge">resourcequota</code><a href="#range-of-resourcequota"><i class="fas fa-hashtag"></i></a></h3></h3><p>A quota of the type <code class="language-plaintext highlighter-rouge">resourcequota</code> is designed to apply a quota of resources to one project or namespace. You could add this resource to the default template of your Openshift projects creation to apply a default quota to all new projects that are created. The quota is created on a project/namespace level.</p><h3 id="range-of-clusterresourcequota">Range of <code class="language-plaintext highlighter-rouge">clusterresourcequota</code><a href="#range-of-clusterresourcequota"><i class="fas fa-hashtag"></i></a></h3></h3><p>As the name suggets, cluster quotas (<code class="language-plaintext highlighter-rouge">clusterresourcequota</code>) are created and designed to work across you cluster. The way they are applied is by using selectors that matches to a label on a project or by using the <code class="language-plaintext highlighter-rouge">openshift.io/requester</code> annotation to link them to a project owner. This can come in handy when you are also using the cluster for developers to experiment on and don’t want them to eat up all the resources. Be sure to update the <code class="language-plaintext highlighter-rouge">openshift.io/requester</code> value on other projects.</p><h2 id="cumulative-quotas">Cumulative Quotas<a href="#cumulative-quotas"><i class="fas fa-hashtag"></i></a></h2></h2><p>You can create (or apply) multible quota’s to a single namespace (but this is not recomendend). If you do, the effect is cummulative (meaning all quota’s will be merged in to one). If you specify the quota for a specifiek resourcetype (like pods) in multible quota’s the lowest value will be used. For example:</p><div class="language-bash highlighter-rouge"><div class="code-header"> <span label-text="Shell"><i class="fas fa-code small"></i></span> <button aria-label="copy" title-succeed="Copied!"><i class="far fa-clipboard"></i></button></div><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+</pre><td class="rouge-code"><pre><span class="nv">$ </span>oc get resourcequotas
+NAME      AGE    REQUEST                       LIMIT
+quota-1   3m     pods: 5/10, secrets: 9/10
+quota-2   3m     configmaps: 2/10, pods: 5/5
+</pre></table></code></div></div><p>2 Quota’s are set: <code class="language-plaintext highlighter-rouge">quota-1</code> and <code class="language-plaintext highlighter-rouge">quota-2</code>. One specifies a limit on secrets and the other on configmaps. This is added up, you an create 10 configmaps and secrets. Both quota’s specify a maximum number of running pods (<code class="language-plaintext highlighter-rouge">max: 5</code> and <code class="language-plaintext highlighter-rouge">max: 10</code>). The lowest one takes precedence. So a maximum of 5 pods can run.</p><h2 id="failure-due-to-quotas">Failure due to quotas<a href="#failure-due-to-quotas"><i class="fas fa-hashtag"></i></a></h2></h2><p>When you set a quota and you try to start things up that exceed that quota some strange things might happen, like:</p><ul><li>When you set a quota of 1 pod per namespace and you try to do a rolling deployment you might encounter some issues. This is because for a rolling deployment to work two (or more depending on the amount of replicas) are required. This is not allowed by your quota so it will get stuck<li>If you try to start up a pod with no requests or limits but you have set resource limits in your quota the pods will not start (because it has no limits set)<li>When exceeding the amount of Memory that is allowed by your quota Openshift will give you some time to adjust in stead of killing your pod.</ul><h1 id="creating-and-viewing-limits-and-requests">Creating and viewing Limits and Requests</h1><p>Lets get bussy on the command line and create some limits and request</p><h2 id="limits-on-pods">Limits on Pods<a href="#limits-on-pods"><i class="fas fa-hashtag"></i></a></h2></h2><p>Lets create a namespace called <code class="language-plaintext highlighter-rouge">limit-the-sky</code> with a demo app called <code class="language-plaintext highlighter-rouge">airplane</code>:</p><div class="language-bash highlighter-rouge"><div class="code-header"> <span label-text="Shell"><i class="fas fa-code small"></i></span> <button aria-label="copy" title-succeed="Copied!"><i class="far fa-clipboard"></i></button></div><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+</pre><td class="rouge-code"><pre><span class="nv">$ </span>oc new-project limit-the-sky
+<span class="nv">$ </span>oc new-app <span class="nt">--name</span> airplane <span class="nt">--image</span> bitnami/nginx
+</pre></table></code></div></div><p>Now lets do something crazy. Let’s set a request thats way to high for our current cluster:</p><div class="language-bash highlighter-rouge"><div class="code-header"> <span label-text="Shell"><i class="fas fa-code small"></i></span> <button aria-label="copy" title-succeed="Copied!"><i class="far fa-clipboard"></i></button></div><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+</pre><td class="rouge-code"><pre><span class="nv">$ </span>oc <span class="nb">set </span>resources deployment airplane <span class="se">\</span>
+  <span class="nt">--requests</span> <span class="nv">cpu</span><span class="o">=</span>12
+deployment.apps/airplane resource requirements updated
+</pre></table></code></div></div><p>What did we do? We set a request for our app for 12 whole vCPU’s. Let’s see if that flies:</p><div class="language-bash highlighter-rouge"><div class="code-header"> <span label-text="Shell"><i class="fas fa-code small"></i></span> <button aria-label="copy" title-succeed="Copied!"><i class="far fa-clipboard"></i></button></div><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+</pre><td class="rouge-code"><pre><span class="nv">$ </span>oc get pods
+NAME                        READY   STATUS    RESTARTS   AGE
+airplane-5d8d87c8d5-lsqsd   0/1     Pending   0          58s
+airplane-779789c8cc-2sfqz   1/1     Running   0          2m32s 
+</pre></table></code></div></div><div class="language-bash highlighter-rouge"><div class="code-header"> <span label-text="Shell"><i class="fas fa-code small"></i></span> <button aria-label="copy" title-succeed="Copied!"><i class="far fa-clipboard"></i></button></div><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+</pre><td class="rouge-code"><pre><span class="nv">$ </span>oc describe pod airplane-5d8d87c8d5-lsqsd
+....
+Events:
+  Type     Reason            Age                From               Message
+  <span class="nt">----</span>     <span class="nt">------</span>            <span class="nt">----</span>               <span class="nt">----</span>               <span class="nt">-------</span>
+  Warning  FailedScheduling  24s <span class="o">(</span>x2 over 91s<span class="o">)</span>  default-scheduler  0/1 nodes are available: 1 Insufficient cpu.
+</pre></table></code></div></div><p>As we can see that just won’t fly in the current cluster. Now lets set something more realistlcy. We are going to ask our cluster for <code class="language-plaintext highlighter-rouge">10m</code> CPU and <code class="language-plaintext highlighter-rouge">128Mi</code> of memory and we are going to set a upper limit of a half vCPU (<code class="language-plaintext highlighter-rouge">500m</code> or <code class="language-plaintext highlighter-rouge">0.5</code>) and a maximum amount of Memory of <code class="language-plaintext highlighter-rouge">512Mi</code>:</p><div class="language-bash highlighter-rouge"><div class="code-header"> <span label-text="Shell"><i class="fas fa-code small"></i></span> <button aria-label="copy" title-succeed="Copied!"><i class="far fa-clipboard"></i></button></div><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+</pre><td class="rouge-code"><pre><span class="nv">$ </span>oc <span class="nb">set </span>resources deployment airplane <span class="se">\</span>
+  <span class="nt">--requests</span> <span class="nv">cpu</span><span class="o">=</span>10m,memory<span class="o">=</span>128Mi <span class="se">\</span>
+  <span class="nt">--limits</span> <span class="nv">cpu</span><span class="o">=</span>500m,memory<span class="o">=</span>512Mi
+deployment.apps/airplane resource requirements updated 
+</pre></table></code></div></div><p>That flies:</p><div class="language-bash highlighter-rouge"><div class="code-header"> <span label-text="Shell"><i class="fas fa-code small"></i></span> <button aria-label="copy" title-succeed="Copied!"><i class="far fa-clipboard"></i></button></div><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+</pre><td class="rouge-code"><pre><span class="nv">$ </span>oc get pods
+NAME                        READY   STATUS    RESTARTS   AGE
+airplane-59cbf468f7-w52xq   1/1     Running   0          18s 
+</pre></table></code></div></div><p>We can always check the limit of a deployment using the <code class="language-plaintext highlighter-rouge">oc describe</code> command:</p><div class="language-bash highlighter-rouge"><div class="code-header"> <span label-text="Shell"><i class="fas fa-code small"></i></span> <button aria-label="copy" title-succeed="Copied!"><i class="far fa-clipboard"></i></button></div><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+</pre><td class="rouge-code"><pre><span class="nv">$ </span>oc describe deployment airplane
+  ....
+  Pod Template:
+  Labels:       <span class="nv">deployment</span><span class="o">=</span>airplane
+  Annotations:  openshift.io/generated-by: OpenShiftNewApp
+  Containers:
+   airplane:
+    Image:       bitnami/nginx@sha256:78cb209a82fca83aee2f2d71f7115165f911acf1fcc6ce48e1c8bddeb5191049
+    Ports:       8080/TCP, 8443/TCP
+    Host Ports:  0/TCP, 0/TCP
+    Limits:
+      cpu:     500m
+      memory:  512Mi
+    Requests:
+      cpu:        10m
+      memory:     128Mi
+    Environment:  &lt;none&gt;
+    Mounts:       &lt;none&gt;
+  Volumes:        &lt;none&gt;
+</pre></table></code></div></div><h2 id="setting-default-min-and-max-with-a-limitrange">Setting default, min and max with a limitrange<a href="#setting-default-min-and-max-with-a-limitrange"><i class="fas fa-hashtag"></i></a></h2></h2><p>Now, you don’t want to manually add limits and requests to everything. We can take care of this by creating a <code class="language-plaintext highlighter-rouge">limitrange</code>. A limitrange can’t entirly be created from CLI but the setup is pretty easy (tip: use <code class="language-plaintext highlighter-rouge">oc explain limitrange</code> to see the available fields):</p><div class="language-yaml highlighter-rouge"><div class="code-header"> <span label-text="YAML"><i class="fas fa-code small"></i></span> <button aria-label="copy" title-succeed="Copied!"><i class="far fa-clipboard"></i></button></div><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+</pre><td class="rouge-code"><pre><span class="c1"># limit-range.yaml</span>
+<span class="na">apiVersion</span><span class="pi">:</span> <span class="s">v1</span>
+<span class="na">kind</span><span class="pi">:</span> <span class="s">LimitRange</span>
+<span class="na">metadata</span><span class="pi">:</span>
+  <span class="na">name</span><span class="pi">:</span> <span class="s">a-limit-range</span>
+  <span class="na">namespace</span><span class="pi">:</span> <span class="s">limit-the-sky</span>
+<span class="na">spec</span><span class="pi">:</span>
+  <span class="na">limits</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">type</span><span class="pi">:</span> <span class="s">Container</span>
+      <span class="na">default</span><span class="pi">:</span>
+        <span class="na">cpu</span><span class="pi">:</span> <span class="s">50m</span>
+      <span class="na">max</span><span class="pi">:</span>
+        <span class="na">cpu</span><span class="pi">:</span> <span class="s">500m</span>
+      <span class="na">min</span><span class="pi">:</span>
+        <span class="na">cpu</span><span class="pi">:</span> <span class="s">10m</span>
+</pre></table></code></div></div><div class="language-bash highlighter-rouge"><div class="code-header"> <span label-text="Shell"><i class="fas fa-code small"></i></span> <button aria-label="copy" title-succeed="Copied!"><i class="far fa-clipboard"></i></button></div><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+</pre><td class="rouge-code"><pre><span class="nv">$ </span>oc apply <span class="nt">-f</span> limit-range.yaml
+limitrange/a-limit-range created
+</pre></table></code></div></div><p>And let’s have a look at it:</p><div class="language-bash highlighter-rouge"><div class="code-header"> <span label-text="Shell"><i class="fas fa-code small"></i></span> <button aria-label="copy" title-succeed="Copied!"><i class="far fa-clipboard"></i></button></div><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+</pre><td class="rouge-code"><pre><span class="nv">$ </span>oc describe limitranges a-limit-range
+Name:       a-limit-range
+Namespace:  limit-the-sky
+Type        Resource  Min  Max   Default Request  Default Limit  Max Limit/Request Ratio
+<span class="nt">----</span>        <span class="nt">--------</span>  <span class="nt">---</span>  <span class="nt">---</span>   <span class="nt">---------------</span>  <span class="nt">-------------</span>  <span class="nt">-----------------------</span>
+Container   cpu       10m  500m  50m              50m
+</pre></table></code></div></div><p>And now, when we crate a new deployment that has no CPU limits:</p><div class="language-bash highlighter-rouge"><div class="code-header"> <span label-text="Shell"><i class="fas fa-code small"></i></span> <button aria-label="copy" title-succeed="Copied!"><i class="far fa-clipboard"></i></button></div><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+</pre><td class="rouge-code"><pre><span class="nv">$ </span>oc new-app <span class="nt">--name</span> zeplin <span class="nt">--image</span> bitnami/nginx
+</pre></table></code></div></div><p>And let’s have a look:</p><div class="language-bash highlighter-rouge"><div class="code-header"> <span label-text="Shell"><i class="fas fa-code small"></i></span> <button aria-label="copy" title-succeed="Copied!"><i class="far fa-clipboard"></i></button></div><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+</pre><td class="rouge-code"><pre><span class="nv">$ </span>oc get pods zeplin-b79b4dcf6-jgtkh <span class="nt">-o</span> yaml | <span class="nb">grep </span>cpu
+    kubernetes.io/limit-ranger: <span class="s1">'LimitRanger plugin set: cpu request for container
+      zeplin; cpu limit for container zeplin'</span>
+        cpu: 50m
+        cpu: 50m 
+</pre></table></code></div></div><p>What happens if we try to go above (or below) the limit?</p><div class="language-bash highlighter-rouge"><div class="code-header"> <span label-text="Shell"><i class="fas fa-code small"></i></span> <button aria-label="copy" title-succeed="Copied!"><i class="far fa-clipboard"></i></button></div><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+</pre><td class="rouge-code"><pre><span class="nv">$ </span>oc <span class="nb">set </span>resources deployment/zeplin <span class="nt">--limits</span> <span class="nv">cpu</span><span class="o">=</span>1000m
+deployment.apps/zeplin resource requirements updated
+</pre></table></code></div></div><p>That’s strange? We set the mac allowed CPU to <code class="language-plaintext highlighter-rouge">500m</code> right? So, why no error? So, there is actually an error but it’s hard to find. You can see the error using <code class="language-plaintext highlighter-rouge">oc get events</code> , by doing a <code class="language-plaintext highlighter-rouge">oc get replicasets</code> or by using <code class="language-plaintext highlighter-rouge">oc describe deployment zeplin</code>. You will see that the cluster is refusing to rollout the latest replicaset because of the limitrange:</p><div class="language-bash highlighter-rouge"><div class="code-header"> <span label-text="Shell"><i class="fas fa-code small"></i></span> <button aria-label="copy" title-succeed="Copied!"><i class="far fa-clipboard"></i></button></div><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+</pre><td class="rouge-code"><pre><span class="nv">$ </span>oc get events | <span class="nb">grep </span>cpu
+....
+7m33s       Warning   FailedCreate        replicaset/zeplin-7dc7446698   Error creating: pods <span class="s2">"zeplin-7dc7446698-cpqdh"</span> is forbidden: maximum cpu usage per Container is 500m, but limit is 1k
+7m32s       Warning   FailedCreate        replicaset/zeplin-7dc7446698   Error creating: pods <span class="s2">"zeplin-7dc7446698-cdxdm"</span> is forbidden: maximum cpu usage per Container is 500m, but limit is 1k
+6m11s       Warning   FailedCreate        replicaset/zeplin-7dc7446698   <span class="o">(</span>combined from similar events<span class="o">)</span>: Error creating: pods <span class="s2">"zeplin-7dc7446698-95g7s"</span> is forbidden: maximum cpu usage per Container is 500m, but limit is 1k
+</pre></table></code></div></div><p>Or in the deployment:</p><div class="language-bash highlighter-rouge"><div class="code-header"> <span label-text="Shell"><i class="fas fa-code small"></i></span> <button aria-label="copy" title-succeed="Copied!"><i class="far fa-clipboard"></i></button></div><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+</pre><td class="rouge-code"><pre><span class="nv">$ </span>oc describe deployment zeplin
+....
+Conditions:
+  Type             Status  Reason
+  <span class="nt">----</span>             <span class="nt">------</span>  <span class="nt">------</span>
+  ReplicaFailure   True    FailedCreate
+  Available        True    MinimumReplicasAvailable
+  Progressing      True    ReplicaSetUpdated
+OldReplicaSets:    zeplin-b79b4dcf6 <span class="o">(</span>1/1 replicas created<span class="o">)</span>
+NewReplicaSet:     zeplin-6f58fb66cd <span class="o">(</span>0/1 replicas created<span class="o">)</span>
+</pre></table></code></div></div><h1 id="creating-and-viewing-quotas">Creating and viewing Quotas</h1><p>Now lets take a step back and look at a the bigger picture. It’s great to set limits and requests on pods but this is a cluster we are using. So lets step it up. We are going to create a namespace <code class="language-plaintext highlighter-rouge">a-quota-for-me</code> with a our quota called <code class="language-plaintext highlighter-rouge">my-quota</code>:</p><div class="language-bash highlighter-rouge"><div class="code-header"> <span label-text="Shell"><i class="fas fa-code small"></i></span> <button aria-label="copy" title-succeed="Copied!"><i class="far fa-clipboard"></i></button></div><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+</pre><td class="rouge-code"><pre><span class="nv">$ </span>oc new-project a-quota-for-me
+<span class="nv">$ </span>oc create quota my-quota <span class="se">\</span>
+  <span class="nt">--hard</span><span class="o">=</span><span class="nv">cpu</span><span class="o">=</span>1,memory<span class="o">=</span>1G,pods<span class="o">=</span>2,secrets<span class="o">=</span>1
+resourcequota/my-quota created
+</pre></table></code></div></div><p>Let’s have a look at our quota:</p><div class="language-bash highlighter-rouge"><div class="code-header"> <span label-text="Shell"><i class="fas fa-code small"></i></span> <button aria-label="copy" title-succeed="Copied!"><i class="far fa-clipboard"></i></button></div><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+</pre><td class="rouge-code"><pre><span class="nv">$ </span>oc describe resourcequotas my-quota
+Name:       my-quota
+Namespace:  a-quota-for-me
+Resource    Used  Hard
+<span class="nt">--------</span>    <span class="nt">----</span>  <span class="nt">----</span>
+cpu         0     1
+memory      0     1G
+pods        0     2
+secrets     9     1
+</pre></table></code></div></div><p>Thats strange! 9 secrets in use? But we set a limit to 1? This can happen because we set the quota after the creation of these secrets. A quota enforces its restrictions on new resources and not on existing. For example, when we try to create a secret now:</p><div class="language-bash highlighter-rouge"><div class="code-header"> <span label-text="Shell"><i class="fas fa-code small"></i></span> <button aria-label="copy" title-succeed="Copied!"><i class="far fa-clipboard"></i></button></div><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+</pre><td class="rouge-code"><pre><span class="nv">$ </span>oc create secret generic just-try-it <span class="nt">--from-literal</span> <span class="nv">key1</span><span class="o">=</span>password
+error: failed to create secret secrets <span class="s2">"just-try-it"</span> is forbidden: exceeded quota: my-quota, requested: <span class="nv">secrets</span><span class="o">=</span>1, used: <span class="nv">secrets</span><span class="o">=</span>9, limited: <span class="nv">secrets</span><span class="o">=</span>1 
+</pre></table></code></div></div><h2 id="applying-quota-to-a-deployment">Applying quota to a deployment<a href="#applying-quota-to-a-deployment"><i class="fas fa-hashtag"></i></a></h2></h2><p>Now lets run a demo application called <code class="language-plaintext highlighter-rouge">you-can-quota-me-on-that</code>:</p><div class="language-bash highlighter-rouge"><div class="code-header"> <span label-text="Shell"><i class="fas fa-code small"></i></span> <button aria-label="copy" title-succeed="Copied!"><i class="far fa-clipboard"></i></button></div><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+</pre><td class="rouge-code"><pre><span class="nv">$ </span>oc new-app <span class="se">\</span>
+  <span class="nt">--name</span> you-can-quota-me-on-that <span class="se">\</span>
+  <span class="nt">--image</span> bitnami/nginx <span class="se">\</span>
+  <span class="nt">--as-deployment-config</span>
+</pre></table></code></div></div><p>But our pod is nowhere to be found:</p><div class="language-bash highlighter-rouge"><div class="code-header"> <span label-text="Shell"><i class="fas fa-code small"></i></span> <button aria-label="copy" title-succeed="Copied!"><i class="far fa-clipboard"></i></button></div><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+</pre><td class="rouge-code"><pre><span class="nv">$ </span>oc get pods
+No resources found <span class="k">in </span>a-quota-for-me namespace
+</pre></table></code></div></div><p>Why? Because we set a resource limit in the quota (a CPU and Memory max) and our pod does not have one:</p><div class="language-bash highlighter-rouge"><div class="code-header"> <span label-text="Shell"><i class="fas fa-code small"></i></span> <button aria-label="copy" title-succeed="Copied!"><i class="far fa-clipboard"></i></button></div><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+</pre><td class="rouge-code"><pre><span class="nv">$ </span>oc describe deploymentconfigs you-can-quota-me-on-that
+  ....
+  Events:
+  Type		Reason			Age			From				Message
+  <span class="nt">----</span>		<span class="nt">------</span>			<span class="nt">----</span>			<span class="nt">----</span>				<span class="nt">-------</span>
+  Normal	DeploymentCreated	4m20s			deploymentconfig-controller	Created new replication controller <span class="s2">"you-can-quota-me-on-that-1"</span> <span class="k">for </span>version 1
+  Warning	FailedRetry		2m42s			deployer-controller		Stop retrying: couldn<span class="s1">'t create deployer pod for "a-quota-for-me/you-can-quota-me-on-that-1": pods "you-can-quota-me-on-that-1-deploy" is forbidden: failed quota: my-quota: must specify cpu,memory
+  Warning	FailedCreate		95s (x24 over 4m20s)	deployer-controller		Error creating deployer pod: pods "you-can-quota-me-on-that-1-deploy" is forbidden: failed quota: my-quota: must specify cpu,memory
+</span></pre></table></code></div></div><p>Or:</p><div class="language-bash highlighter-rouge"><div class="code-header"> <span label-text="Shell"><i class="fas fa-code small"></i></span> <button aria-label="copy" title-succeed="Copied!"><i class="far fa-clipboard"></i></button></div><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+</pre><td class="rouge-code"><pre><span class="nv">$ </span>oc get events
+61s         Warning   FailedCreate                     deploymentconfig/you-can-quota-me-on-that   Error creating deployer pod: pods <span class="s2">"you-can-quota-me-on-that-1-deploy"</span> is forbidden: failed quota: my-quota: must specify cpu,memory
+</pre></table></code></div></div><p>So lets set a request like in our previous example:</p><div class="language-bash highlighter-rouge"><div class="code-header"> <span label-text="Shell"><i class="fas fa-code small"></i></span> <button aria-label="copy" title-succeed="Copied!"><i class="far fa-clipboard"></i></button></div><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+</pre><td class="rouge-code"><pre><span class="nv">$ </span>oc <span class="nb">set </span>resources deploymentconfig you-can-quota-me-on-that <span class="se">\</span>
+  <span class="nt">--requests</span> <span class="nv">cpu</span><span class="o">=</span>10m,memory<span class="o">=</span>56Mi
+deploymentconfig.apps.openshift.io/you-can-quota-me-on-that resource requirements updated
+</pre></table></code></div></div><p>But that won’t do the trick. Why? Because we set the requests on the pod and the error message is telling us the deployer pod is no allowed. So lets edit that by hand. To do that we add the requests under the deployment strategy:</p><div class="language-bash highlighter-rouge"><div class="code-header"> <span label-text="Shell"><i class="fas fa-code small"></i></span> <button aria-label="copy" title-succeed="Copied!"><i class="far fa-clipboard"></i></button></div><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+</pre><td class="rouge-code"><pre><span class="nv">$ </span>oc edit deploymentconfigs you-can-quota-me-on-that
+spec:
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    deploymentconfig: you-can-quota-me-on-that
+  strategy:
+    activeDeadlineSeconds: 21600
+    resources: <span class="o">{}</span>
+    rollingParams:
+      intervalSeconds: 1
+      maxSurge: 25%
+      maxUnavailable: 25%
+      timeoutSeconds: 600
+      updatePeriodSeconds: 1
+    <span class="nb">type</span>: Rolling
+    resources:
+      requests:
+        cpu: 10m
+        memory: 56Mi
+</pre></table></code></div></div><p>Now lets rollout the latest version:</p><div class="language-bash highlighter-rouge"><div class="code-header"> <span label-text="Shell"><i class="fas fa-code small"></i></span> <button aria-label="copy" title-succeed="Copied!"><i class="far fa-clipboard"></i></button></div><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+</pre><td class="rouge-code"><pre><span class="nv">$ </span>oc rollout latest you-can-quota-me-on-that
+deploymentconfig.apps.openshift.io/you-can-quota-me-on-that rolled out
+
+NAME                                READY   STATUS      RESTARTS   AGE
+you-can-quota-me-on-that-3-deploy   0/1     Completed   0          24s
+you-can-quota-me-on-that-3-k2pl7    1/1     Running     0          18s
+</pre></table></code></div></div><h2 id="hitting-quota-limits">Hitting quota limits<a href="#hitting-quota-limits"><i class="fas fa-hashtag"></i></a></h2></h2><p>Let’s scale that up to 4 replicas:</p><div class="language-bash highlighter-rouge"><div class="code-header"> <span label-text="Shell"><i class="fas fa-code small"></i></span> <button aria-label="copy" title-succeed="Copied!"><i class="far fa-clipboard"></i></button></div><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+</pre><td class="rouge-code"><pre><span class="nv">$ </span>oc scale deploymentconfig you-can-quota-me-on-that <span class="nt">--replicas</span> 4
+deploymentconfig.apps.openshift.io/you-can-quota-me-on-that scaled
+</pre></table></code></div></div><div class="language-bash highlighter-rouge"><div class="code-header"> <span label-text="Shell"><i class="fas fa-code small"></i></span> <button aria-label="copy" title-succeed="Copied!"><i class="far fa-clipboard"></i></button></div><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+</pre><td class="rouge-code"><pre><span class="nv">$ </span>oc get pods
+NAME                                READY   STATUS      RESTARTS   AGE
+you-can-quota-me-on-that-3-deploy   0/1     Completed   0          70s
+you-can-quota-me-on-that-3-k2pl7    1/1     Running     0          64s
+you-can-quota-me-on-that-3-v5xnp    1/1     Running     0          10s 
+</pre></table></code></div></div><p>That’s stange. Where are the pods? As mentioned before. A quota denies deployment of resources that exceed the quota. We have requested four pods to be created but the cluster will only give use two. We can see the error in the <code class="language-plaintext highlighter-rouge">replicationcontroller</code></p><div class="language-bash highlighter-rouge"><div class="code-header"> <span label-text="Shell"><i class="fas fa-code small"></i></span> <button aria-label="copy" title-succeed="Copied!"><i class="far fa-clipboard"></i></button></div><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+</pre><td class="rouge-code"><pre><span class="nv">$ </span>oc describe replicationcontrollers you-can-quota-me-on-that-3
+....
+Events:
+  Type		Reason				Age			From				Message
+  <span class="nt">----</span>		<span class="nt">------</span>				<span class="nt">----</span>			<span class="nt">----</span>				<span class="nt">-------</span>
+  Warning  FailedCreate      2m35s                replication-controller  Error creating: pods <span class="s2">"you-can-quota-me-on-that-3-tcn57"</span> is forbidden: exceeded quota: my-quota, requested: <span class="nv">pods</span><span class="o">=</span>1, used: <span class="nv">pods</span><span class="o">=</span>2, limited: <span class="nv">pods</span><span class="o">=</span>2
+  Warning  FailedCreate      2m35s                replication-controller  Error creating: pods <span class="s2">"you-can-quota-me-on-that-3-w9wp6"</span> is forbidden: exceeded quota: my-quota, requested: <span class="nv">pods</span><span class="o">=</span>1, used: <span class="nv">pods</span><span class="o">=</span>2, limited: <span class="nv">pods</span><span class="o">=</span>2
+  Warning  FailedCreate      25s <span class="o">(</span>x8 over 2m34s<span class="o">)</span>  replication-controller  <span class="o">(</span>combined from similar events<span class="o">)</span>: Error creating: pods <span class="s2">"you-can-quota-me-on-that-3-zmp82"</span> is forbidden: exceeded quota: my-quota, requested: <span class="nv">pods</span><span class="o">=</span>1, used: <span class="nv">pods</span><span class="o">=</span>2,
+</pre></table></code></div></div><h2 id="creating-a-clusterresourcequota">Creating a <code class="language-plaintext highlighter-rouge">clusterresourcequota</code><a href="#creating-a-clusterresourcequota"><i class="fas fa-hashtag"></i></a></h2></h2><p>We can create a cluster quota that wil target our user anna with the following command<sup id="fnref:CreateClusterQuota" role="doc-noteref"><a href="#fn:CreateClusterQuota" class="footnote" rel="footnote">5</a></sup>:</p><div class="language-bash highlighter-rouge"><div class="code-header"> <span label-text="Shell"><i class="fas fa-code small"></i></span> <button aria-label="copy" title-succeed="Copied!"><i class="far fa-clipboard"></i></button></div><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+</pre><td class="rouge-code"><pre><span class="nv">$ </span>oc create clusterquota <span class="k">for</span><span class="nt">-user-anna</span> <span class="se">\</span>
+     <span class="nt">--project-annotation-selector</span> openshift.io/requester<span class="o">=</span>anna <span class="se">\</span>
+     <span class="nt">--hard</span> <span class="nv">pods</span><span class="o">=</span>10 <span class="se">\</span>
+     <span class="nt">--hard</span> <span class="nv">secrets</span><span class="o">=</span>20 
+</pre></table></code></div></div><p>To see a resourcequota that is applied to the namespace use:</p><div class="language-bash highlighter-rouge"><div class="code-header"> <span label-text="Shell"><i class="fas fa-code small"></i></span> <button aria-label="copy" title-succeed="Copied!"><i class="far fa-clipboard"></i></button></div><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+</pre><td class="rouge-code"><pre><span class="nv">$ </span>oc describe AppliedClusterResourceQuota
+Name:		<span class="k">for</span><span class="nt">-user-anna</span>
+Created:	2 minutes ago
+Labels:		&lt;none&gt;
+Annotations:	&lt;none&gt;
+Namespace Selector: <span class="o">[</span><span class="s2">"annas-project"</span><span class="o">]</span>
+Label Selector:
+AnnotationSelector: map[openshift.io/requester:anna]
+Resource	Used	Hard
+<span class="nt">--------</span>	<span class="nt">----</span>	<span class="nt">----</span>
+pods		10	10
+secrets		9	20 
+</pre></table></code></div></div><h1 id="wrapping-it-up">Wrapping it up</h1><p>This post turned out rather long! Lets review the information with some examples:</p><ul><li>We use <code class="language-plaintext highlighter-rouge">Limits</code> to set a limit (the maximum amount of a resource that a pod can use) and requests (the amount of resources a pod needs and is ensured) on containers and pods.<ul><li>You can use a <code class="language-plaintext highlighter-rouge">limit</code> to set the maximum amount of CPU usage by a pod or container to 1 CPU<li>You can ensure a pod or container always gets <code class="language-plaintext highlighter-rouge">512Mi</code> of Memory using a <code class="language-plaintext highlighter-rouge">request</code></ul><li>We use <code class="language-plaintext highlighter-rouge">LimitRanges</code> to set a default, minimum or maximum of the resources each pod can get.<ul><li>We can use a <code class="language-plaintext highlighter-rouge">LimitRange</code> to set a default Memory request for all pods<li>A <code class="language-plaintext highlighter-rouge">LimitRange</code> can limit the maximum amount of CPU a pod can request to <code class="language-plaintext highlighter-rouge">200m</code></ul><li>We use <code class="language-plaintext highlighter-rouge">ResourceQuota</code> to set the maximum number of objects in a namespace or to enforce the usage of a limit and the total amount of resources a namespace can use<ul><li>A quota in a namespace can limit the sum of all CPU requests to 2 CPU’s (<code class="language-plaintext highlighter-rouge">2000m</code> or <code class="language-plaintext highlighter-rouge">2</code>)<li>You can limit the amount of routes you can have in a namespace to 1<li>You can force pod’s to have a set limit or request</ul><li>And we can use a <code class="language-plaintext highlighter-rouge">ClusterResourceQuota</code> to span a quota over multiple namespaces based on a field tag or the requester (owner) of a project.<ul><li>With a cluster quota we can set a limit of 20 pods that can be running by a user<li>We can limit the amount of CPU used to 4 (<code class="language-plaintext highlighter-rouge">4000m</code>) of several namespaces that we have tagd as <code class="language-plaintext highlighter-rouge">production=true</code></ul></ul><p>All in all, pretty usefull stuf. Be sure to practice with this and run in to strange situations!</p><p>Do you want to see more of my EX280 post’s? Checkout my <a href="https://blog.benstein.nl/ex280/">EX280 page</a></p><div class="footnotes" role="doc-endnotes"><ol><li id="fn:CPUInKubernetes" role="doc-endnote"><p>https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#meaning-of-cpu <a href="#fnref:CPUInKubernetes" class="reversefootnote" role="doc-backlink">&#8617;</a></p><li id="fn:LimitButNoRequest" role="doc-endnote"><p>https://kubernetes.io/docs/tasks/administer-cluster/manage-resources/cpu-default-namespace/#what-if-you-specify-a-container-s-limit-but-not-its-request <a href="#fnref:LimitButNoRequest" class="reversefootnote" role="doc-backlink">&#8617;</a></p><li id="fn:RequestButNoLimit" role="doc-endnote"><p>https://kubernetes.io/docs/tasks/administer-cluster/manage-resources/cpu-default-namespace/#what-if-you-specify-a-container-s-request-but-not-its-limit <a href="#fnref:RequestButNoLimit" class="reversefootnote" role="doc-backlink">&#8617;</a></p><li id="fn:3OOMAndMemoryUsage" role="doc-endnote"><p>https://kubernetes.io/docs/tasks/configure-pod-container/assign-memory-resource/#if-you-do-not-specify-a-memory-limit <a href="#fnref:3OOMAndMemoryUsage" class="reversefootnote" role="doc-backlink">&#8617;</a></p><li id="fn:CreateClusterQuota" role="doc-endnote"><p>https://docs.openshift.com/container-platform/4.8/applications/quotas/quotas-setting-across-multiple-projects.html <a href="#fnref:CreateClusterQuota" class="reversefootnote" role="doc-backlink">&#8617;</a></p></ol></div></div><div class="post-tail-wrapper text-muted"><div class="post-meta mb-3"> <i class="far fa-folder-open fa-fw mr-1"></i> <a href='/categories/ex280/'>EX280</a></div><div class="post-tags"> <i class="fa fa-tags fa-fw mr-1"></i> <a href="/tags/openshift/" class="post-tag no-text-decoration" >openshift</a> <a href="/tags/kubernetes/" class="post-tag no-text-decoration" >kubernetes</a> <a href="/tags/ex280/" class="post-tag no-text-decoration" >ex280</a></div><div class="post-tail-bottom d-flex justify-content-between align-items-center mt-3 pt-5 pb-2"><div class="license-wrapper"> This post is licensed under <a href="https://creativecommons.org/licenses/by/4.0/"> CC BY 4.0 </a> by the author.</div><div class="share-wrapper"> <span class="share-label text-muted mr-1">Share</span> <span class="share-icons"> <a href="https://twitter.com/intent/tweet?text=Quotas, limits and limit-ranges - Christian's Blog&url=https://kingofspades.github.io/posts/quotas-limits-and-limit-ranges/" data-toggle="tooltip" data-placement="top" title="Twitter" target="_blank" rel="noopener" aria-label="Twitter"> <i class="fa-fw fab fa-twitter"></i> </a> <a href="https://www.facebook.com/sharer/sharer.php?title=Quotas, limits and limit-ranges - Christian's Blog&u=https://kingofspades.github.io/posts/quotas-limits-and-limit-ranges/" data-toggle="tooltip" data-placement="top" title="Facebook" target="_blank" rel="noopener" aria-label="Facebook"> <i class="fa-fw fab fa-facebook-square"></i> </a> <a href="https://telegram.me/share?text=Quotas, limits and limit-ranges - Christian's Blog&url=https://kingofspades.github.io/posts/quotas-limits-and-limit-ranges/" data-toggle="tooltip" data-placement="top" title="Telegram" target="_blank" rel="noopener" aria-label="Telegram"> <i class="fa-fw fab fa-telegram"></i> </a> <a href="https://www.linkedin.com/sharing/share-offsite/?url=https://kingofspades.github.io/posts/quotas-limits-and-limit-ranges/" data-toggle="tooltip" data-placement="top" title="Linkedin" target="_blank" rel="noopener" aria-label="Linkedin"> <i class="fa-fw fab fa-linkedin"></i> </a> <i id="copy-link" class="fa-fw fas fa-link small" data-toggle="tooltip" data-placement="top" title="Copy link" title-succeed="Link copied successfully!"> </i> </span></div></div></div></div></div><div id="panel-wrapper" class="col-xl-3 pl-2 text-muted topbar-down"><div class="access"><div id="access-lastmod" class="post"><div class="panel-heading">Recent Update</div><ul class="post-content pl-0 pb-1 ml-1 mt-2"><li><a href="/posts/lets-get-fuzzy/">Let's get fuzzys</a><li><a href="/posts/creating-a-ex280-page/">Creating my EX280 page on Jekyll</a><li><a href="/posts/troubelshooting-permissions-on-pods/">ServiceAccounts and SCCs - Running pods with more permission's</a><li><a href="/posts/customizing-project-creation-openshift/">Configuring default Project creation in Openshift</a><li><a href="/posts/exposing-services-with-routes-and-ssl/">Exposing services with routes and SSL</a></ul></div><div id="access-tags"><div class="panel-heading">Trending Tags</div><div class="d-flex flex-wrap mt-3 mb-1 mr-3"> <a class="post-tag" href="/tags/ex280/">ex280</a> <a class="post-tag" href="/tags/kubernetes/">kubernetes</a> <a class="post-tag" href="/tags/openshift/">openshift</a> <a class="post-tag" href="/tags/macos/">macos</a> <a class="post-tag" href="/tags/cli/">cli</a> <a class="post-tag" href="/tags/customization/">customization</a> <a class="post-tag" href="/tags/alfred/">alfred</a> <a class="post-tag" href="/tags/linux/">linux</a> <a class="post-tag" href="/tags/azure/">azure</a> <a class="post-tag" href="/tags/things3/">things3</a></div></div></div><script src="https://cdn.jsdelivr.net/gh/afeld/bootstrap-toc@1.0.1/dist/bootstrap-toc.min.js"></script><div id="toc-wrapper" class="pl-0 pr-4 mb-5"><div class="panel-heading pl-3 pt-2 mb-2">Contents</div><nav id="toc" data-toggle="toc"></nav></div></div></div><div class="row"><div class="col-12 col-lg-11 col-xl-8"><div id="tail-wrapper" class="pl-1 pr-1 pl-sm-2 pr-sm-2 pl-md-4 pr-md-4"><div id="related-posts" class="mt-5 mb-2 mb-sm-4"><h3 class="pt-2 mt-1 mb-4 ml-1" data-toc-skip>Further Reading</h3><div class="card-deck mb-4"><div class="card"> <a href="/posts/create-and-use-secrets-openshift/"><div class="card-body"> <em class="timeago small" date="2022-01-16 00:00:00 +0100" >Jan 16</em><h3 class="pt-0 mt-1 mb-3" data-toc-skip>Creating and Using Secrets in OpenShift</h3><div class="text-muted small"><p> Creating Secrets (like creating ConfigMaps) is a vital part of Managing OpenShift workloads and is an exam objectives of the EX280 exam. Knowing how they work and how to configure them (from the co...</p></div></div></a></div><div class="card"> <a href="/posts/troubelshooting-permissions-on-pods/"><div class="card-body"> <em class="timeago small" date="2022-01-17 00:00:00 +0100" >Jan 17</em><h3 class="pt-0 mt-1 mb-3" data-toc-skip>ServiceAccounts and SCCs - Running pods with more permission's</h3><div class="text-muted small"><p> In this blog we will take a look at SCC permissions that are needed to run a pod with escalated permissions and how to use a serviceaccount (sa) to run such a pod or deployment. Small thing: I use...</p></div></div></a></div><div class="card"> <a href="/posts/controlling-pod-rollout-and-scaling/"><div class="card-body"> <em class="timeago small" date="2022-01-23 00:00:00 +0100" >Jan 23</em><h3 class="pt-0 mt-1 mb-3" data-toc-skip>Scaling applications - Rollout, Scale and Auto-Scale Deployments</h3><div class="text-muted small"><p> This post is gonna be a bit bigger broader then what is requested on the EX280 exam objectives. In this post we will have a look at: Controlling roll-out of pods (manually rolling out or back a ...</p></div></div></a></div></div></div><div class="post-navigation d-flex justify-content-between"> <a href="/posts/controlling-pod-rollout-and-scaling/" class="btn btn-outline-primary" prompt="Older"><p>Scaling applications - Rollout, Scale and Auto-Scale Deployments</p></a> <a href="/posts/pod-affinity-and-anti-affinity/" class="btn btn-outline-primary" prompt="Newer"><p>Pod Affinity and Anti-affinity - Spreading out workloads</p></a></div><div id="disqus_thread" class="pt-2 pb-2"><p class="text-center text-muted small"> Comments powered by <a href="https://disqus.com/">Disqus</a>.</p></div><script type="text/javascript"> var disqus_config = function () { this.page.url = 'https://kingofspades.github.io/posts/quotas-limits-and-limit-ranges/'; this.page.identifier = '/posts/quotas-limits-and-limit-ranges/'; }; /* Lazy loading */ var disqus_observer = new IntersectionObserver(function (entries) { if(entries[0].isIntersecting) { (function () { var d = document, s = d.createElement('script'); s.src = 'https://https-blog-benstein-nl.disqus.com/embed.js'; s.setAttribute('data-timestamp', +new Date()); (d.head || d.body).appendChild(s); })(); disqus_observer.disconnect(); } }, { threshold: [0] }); disqus_observer.observe(document.querySelector('#disqus_thread')); /* Auto switch theme */ function reloadDisqus() { /* Disqus hasn't been loaded */ if (typeof DISQUS === "undefined") { return; } if (document.readyState == 'complete') { DISQUS.reset({ reload: true, config: disqus_config }); } } const modeToggle = document.querySelector(".mode-toggle"); if (typeof modeToggle !== "undefined") { /* modeToggle.addEventListener('click', reloadDisqus); // not pretty for 'color-scheme' */ window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', reloadDisqus); } </script></div></div></div><footer class="d-flex w-100 justify-content-center"><div class="d-flex justify-content-between align-items-center text-muted"><div class="footer-left"><p class="mb-0"> © 2022 <a href="https://github.com/KingOfSpades">Christian A. Benstein</a>. <span data-toggle="tooltip" data-placement="top" title="Except where otherwise noted, the blog posts on this site are licensed under the Creative Commons Attribution 4.0 International (CC BY 4.0) License by the author.">Some rights reserved.</span></p></div><div class="footer-right"><p class="mb-0"> Powered by <a href="https://jekyllrb.com" target="_blank" rel="noopener">Jekyll</a> with <a href="https://github.com/cotes2020/jekyll-theme-chirpy" target="_blank" rel="noopener">Chirpy</a> theme.</p></div></div></footer></div><div id="search-result-wrapper" class="d-flex justify-content-center unloaded"><div class="col-12 col-sm-11 post-content"><div id="search-hints"><div id="access-tags"><div class="panel-heading">Trending Tags</div><div class="d-flex flex-wrap mt-3 mb-1 mr-3"> <a class="post-tag" href="/tags/ex280/">ex280</a> <a class="post-tag" href="/tags/kubernetes/">kubernetes</a> <a class="post-tag" href="/tags/openshift/">openshift</a> <a class="post-tag" href="/tags/macos/">macos</a> <a class="post-tag" href="/tags/cli/">cli</a> <a class="post-tag" href="/tags/customization/">customization</a> <a class="post-tag" href="/tags/alfred/">alfred</a> <a class="post-tag" href="/tags/linux/">linux</a> <a class="post-tag" href="/tags/azure/">azure</a> <a class="post-tag" href="/tags/things3/">things3</a></div></div></div><div id="search-results" class="d-flex flex-wrap justify-content-center text-muted mt-3"></div></div></div></div><script src="https://cdn.jsdelivr.net/npm/mermaid@8/dist/mermaid.min.js"></script> <script> $(function() { let initTheme = "default"; if ($("html[mode=dark]").length > 0 || ($("html[mode]").length == 0 && window.matchMedia("(prefers-color-scheme: dark)").matches ) ) { initTheme = "dark"; } let mermaidConf = { theme: initTheme /* <default|dark|forest|neutral> */ }; /* Markdown converts to HTML */ $("pre").has("code.language-mermaid").each(function() { let svgCode = $(this).children().html(); $(this).addClass("unloaded"); $(this).after(`<div class=\"mermaid\">${svgCode}</div>`); }); mermaid.initialize(mermaidConf); }); </script><div id="mask"></div><a id="back-to-top" href="#" aria-label="back-to-top" class="btn btn-lg btn-box-shadow" role="button"> <i class="fas fa-angle-up"></i> </a> <script src="https://cdn.jsdelivr.net/npm/simple-jekyll-search@1.10.0/dest/simple-jekyll-search.min.js"></script> <script> SimpleJekyllSearch({ searchInput: document.getElementById('search-input'), resultsContainer: document.getElementById('search-results'), json: '/assets/js/data/search.json', searchResultTemplate: '<div class="pl-1 pr-1 pl-sm-2 pr-sm-2 pl-lg-4 pr-lg-4 pl-xl-0 pr-xl-0"> <a href="{url}">{title}</a><div class="post-meta d-flex flex-column flex-sm-row text-muted mt-1 mb-1"> {categories} {tags}</div><p>{snippet}</p></div>', noResultsText: '<p class="mt-5">Oops! No result founds.</p>', templateMiddleware: function(prop, value, template) { if (prop === 'categories') { if (value === '') { return `${value}`; } else { return `<div class="mr-sm-4"><i class="far fa-folder fa-fw"></i>${value}</div>`; } } if (prop === 'tags') { if (value === '') { return `${value}`; } else { return `<div><i class="fa fa-tag fa-fw"></i>${value}</div>`; } } } }); </script> <script src="https://cdn.jsdelivr.net/combine/npm/lozad/dist/lozad.min.js,npm/magnific-popup@1/dist/jquery.magnific-popup.min.js,npm/clipboard@2/dist/clipboard.min.js"></script> <script defer src="/assets/js/dist/post.min.js"></script> <script src="https://cdn.jsdelivr.net/combine/npm/popper.js@1.16.1,npm/bootstrap@4/dist/js/bootstrap.min.js"></script> <script defer src="/app.js"></script> <script defer src="https://www.googletagmanager.com/gtag/js?id=G-9VZBEPDENQ"></script> <script> document.addEventListener("DOMContentLoaded", function(event) { window.dataLayer = window.dataLayer || []; function gtag(){dataLayer.push(arguments);} gtag('js', new Date()); gtag('config', 'G-9VZBEPDENQ'); }); </script>
