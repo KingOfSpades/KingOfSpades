@@ -39,6 +39,12 @@ In all seriousnesss. You can follow the [instructions from Apple](https://suppor
 **Please Please PLEASE!!!** Set up your TimeMachine backup with a password. If you do not do this someone could just yank out your backup drive and have copy of all your data
 {:.error}
 
+![JetDrive as backup](/assets/images/JetDrive-AsTimeMachine.png)
+_Using the JetDrive as TimeMachine Backup Drive_
+
+![TimeMachine](/assets/images/TimeMachine.png)
+_Overview of TimeMachine Settings_
+
 # Alternatives
 
 There are a lot of alternatives for TimeMachine backups on the go, you could:
